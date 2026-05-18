@@ -1,16 +1,40 @@
 const defaultUrl = "https://raw.githubusercontent.com/bigdargon/hostsVN/master/hosts";
+const statusDiv = document.getElementById('status');
+const hostUrlInput = document.getElementById('hostUrl');
 
-// Hiển thị URL cũ khi mở popup
-chrome.storage.local.get(['hostsUrl', 'blockedCount'], (res) => {
-  document.getElementById('hostUrl').value = res.hostsUrl || defaultUrl;
-  if(res.blockedCount) {
-    document.getElementById('status').innerText = `Blocking: ${res.blockedCount} domains.`;
+function updateUI(res) {
+  hostUrlInput.value = res.hostsUrl || defaultUrl;
+
+  if (res.downloadStatus) {
+    statusDiv.innerText = res.downloadStatus.message;
+    
+    if (res.downloadStatus.state === "loading") {
+      statusDiv.style.color = "black";
+    } else if (res.downloadStatus.state === "success") {
+      statusDiv.style.color = "green";
+    } else if (res.downloadStatus.state === "error") {
+      statusDiv.style.color = "red";
+    }
+  } else if (res.blockedCount) {
+    statusDiv.style.color = "black";
+    statusDiv.innerText = `Blocking: ${res.blockedCount} domains.`;
+  }
+}
+
+chrome.storage.local.get(['hostsUrl', 'blockedCount', 'downloadStatus'], (res) => {
+  updateUI(res);
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local') {
+    chrome.storage.local.get(['hostsUrl', 'blockedCount', 'downloadStatus'], (res) => {
+      updateUI(res);
+    });
   }
 });
 
-document.getElementById('btnDownload').addEventListener('click', async () => {
-  const url = document.getElementById('hostUrl').value.trim();
-  const statusDiv = document.getElementById('status');
+document.getElementById('btnDownload').addEventListener('click', () => {
+  const url = hostUrlInput.value.trim();
   
   if (!url) {
     statusDiv.style.color = "red";
@@ -18,43 +42,10 @@ document.getElementById('btnDownload').addEventListener('click', async () => {
     return;
   }
 
-  statusDiv.style.color = "black";
-  statusDiv.innerText = "Downloading hosts list...";
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("Cannot download file from this URL.");
-    
-    const text = await response.text();
-    
-    // Parse file hosts
-    const lines = text.split('\n');
-    const blockedDomains = {};
-    
-    lines.forEach(line => {
-      line = line.trim();
-      if (!line || line.startsWith('#')) return;
-      
-      const parts = line.split(/\s+/);
-      if (parts.length >= 2) {
-        const domain = parts[1].trim().toLowerCase();
-        blockedDomains[domain] = true;
-      }
-    });
-
-    const domainCount = Object.keys(blockedDomains).length;
-
-    await chrome.storage.local.set({ 
-      hostsUrl: url, 
-      hostsData: blockedDomains,
-      blockedCount: domainCount
-    });
-
-    statusDiv.style.color = "green";
-    statusDiv.innerText = `Success! Downloaded and saved ${domainCount} domains. Please refresh the web pages.`;
-
-  } catch (error) {
-    statusDiv.style.color = "red";
-    statusDiv.innerText = "Error: " + error.message;
-  }
+  chrome.runtime.sendMessage({ action: "downloadHosts", url: url }, (response) => {
+    if (chrome.runtime.lastError) {
+      statusDiv.style.color = "red";
+      statusDiv.innerText = "Background script connection error.";
+    }
+  });
 });
