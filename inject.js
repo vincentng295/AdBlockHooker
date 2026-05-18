@@ -160,6 +160,7 @@
     const _WebSocket = window.WebSocket;
     const _toString = Function.prototype.toString;
     const _bind = Function.prototype.bind;
+    const _sendBeacon = navigator.sendBeacon;
     const _getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
 
     // ===== NATIVE MASK SYSTEM =====
@@ -172,7 +173,7 @@
     }
 
     // ===== PATCH toString =====
-    Function.prototype.toString = new Proxy(_toString, {
+    const customToString = new Proxy(_toString, {
         apply(target, thisArg, args) {
             if (FAKE_MAP.has(thisArg)) {
                 return FAKE_MAP.get(thisArg);
@@ -180,6 +181,7 @@
             return Reflect.apply(target, thisArg, args);
         },
     });
+    Function.prototype.toString = customToString;
 
     // ===== PATCH bind =====
     Function.prototype.bind = new Proxy(_bind, {
@@ -203,6 +205,54 @@
         }
     });
     mark(Object.getOwnPropertyDescriptor, "function getOwnPropertyDescriptor() { [native code] }");
+
+
+    // =====================================================
+    // ANTI-DETECTION: IFRAME REALM JAILBREAK PROTECTION
+    // =====================================================
+    const descContentWindow = _getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'contentWindow');
+    const descContentDocument = _getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'contentDocument');
+
+    if (descContentWindow && descContentWindow.get) {
+        const customContentWindowGetter = function() {
+            const win = descContentWindow.get.call(this);
+            if (win && win.Function && win.Function.prototype) {
+                try {
+                    if (win.Function.prototype.toString !== customToString) {
+                        win.Function.prototype.toString = customToString;
+                    }
+                } catch(e) {}
+            }
+            return win;
+        };
+        mark(customContentWindowGetter, "function get contentWindow() { [native code] }");
+        Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
+            get: customContentWindowGetter,
+            configurable: true,
+            enumerable: true
+        });
+    }
+
+    if (descContentDocument && descContentDocument.get) {
+        const customContentDocumentGetter = function() {
+            const doc = descContentDocument.get.call(this);
+            if (doc && doc.defaultView && doc.defaultView.Function && doc.defaultView.Function.prototype) {
+                try {
+                    if (doc.defaultView.Function.prototype.toString !== customToString) {
+                        doc.defaultView.Function.prototype.toString = customToString;
+                    }
+                } catch(e) {}
+            }
+            return doc;
+        };
+        mark(customContentDocumentGetter, "function get contentDocument() { [native code] }");
+        Object.defineProperty(HTMLIFrameElement.prototype, 'contentDocument', {
+            get: customContentDocumentGetter,
+            configurable: true,
+            enumerable: true
+        });
+    }
+
 
     // =====================================================
     // HTML ATTRIBUTES HOOK (DOM HOOK) & ANONYMITY
@@ -245,37 +295,41 @@
     // =====================================================
     // FETCH HOOK
     // =====================================================
-    function fetch(resource, config) {
-        try {
-            let __url = resource;
-            if (resource instanceof Request) {
-                __url = resource.url;
-            }
-            if (isBlockList(__url)) {
-                console_log("[Blocked Fetch]", __url);
-                const fakeResponse = new Response(JSON.stringify({ blocked: true }), {
-                    status: 200,
-                    statusText: "OK",
-                    headers: new Headers({ "Content-Type": "application/json" })
-                });
-                Object.defineProperty(fakeResponse, 'url', {
-                    value: __url,
-                    writable: false,
-                    configurable: true,
-                    enumerable: true
-                });
-                return Promise.resolve(fakeResponse);
-            }
-        } catch {}
-        return _fetch.call(window, resource, config);
-    }
+    const fetchContainer = {
+        fetch(resource, config) {
+            try {
+                let __url = resource;
+                if (resource instanceof Request) {
+                    __url = resource.url;
+                }
+                if (isBlockList(__url)) {
+                    console_log("[Blocked Fetch]", __url);
+                    const fakeResponse = new Response(JSON.stringify({ blocked: true }), {
+                        status: 200,
+                        statusText: "OK",
+                        headers: new Headers({ "Content-Type": "application/json" })
+                    });
+                    Object.defineProperty(fakeResponse, 'url', {
+                        value: __url,
+                        writable: false,
+                        configurable: true,
+                        enumerable: true
+                    });
+                    return Promise.resolve(fakeResponse);
+                }
+            } catch {}
+            return _fetch.call(window, resource, config);
+        }
+    };
 
+    const fetch = fetchContainer.fetch;
     mark(fetch, "function fetch() { [native code] }");
     Object.defineProperties(fetch, {
         name: { value: "fetch", configurable: true },
         length: { value: 1, configurable: true },
     });
     window.fetch = fetch;
+
 
     // =====================================================
     // XHR OPEN HOOK
@@ -299,6 +353,7 @@
         name: { value: "open", configurable: true },
     });
     XMLHttpRequest.prototype.open = open;
+
 
     // =====================================================
     // XHR SEND HOOK
@@ -337,12 +392,15 @@
     });
     XMLHttpRequest.prototype.send = send;
 
+
     // =====================================================
     // WEBSOCKET HOOK
     // =====================================================
-
     function FakeWebSocket(url, protocols) {
-        // Lưu lại URL gốc ban đầu để ngụy trang
+        if (!new.target) {
+            throw new TypeError("Failed to construct 'WebSocket': Please use the 'new' operator, this DOM object cannot be converted to a function.");
+        }
+
         const originalUrl = url; 
         let processedUrl = url;
 
@@ -390,28 +448,32 @@
         length: { value: 1, configurable: true },
     });
     
-    window.WebSocket = FakeWebSocket;
+    Object.defineProperty(window, "WebSocket", { 
+        value: FakeWebSocket, 
+        writable: true, 
+        configurable: true, 
+        enumerable: false 
+    });
 
-    try {
-        Object.defineProperty(window, "WebSocket", { writable: false, configurable: false });
-    } catch {}
 
     // =====================================================
     // SENDBEACON HOOK
     // =====================================================
-    const _sendBeacon = navigator.sendBeacon;
-    function sendBeacon(url, data) {
-        try {
-            const targetUrl = typeof url === "string" ? processUrl(url) : url;
-            if (isBlockList(url)) {
-                console_log("[Blocked SendBeacon]", url);
-                return true; 
-            }
-            arguments[0] = targetUrl;
-        } catch {}
-        return _sendBeacon.apply(navigator, arguments);
-    }
+    const beaconContainer = {
+        sendBeacon(url, data) {
+            try {
+                const targetUrl = typeof url === "string" ? processUrl(url) : url;
+                if (isBlockList(url)) {
+                    console_log("[Blocked SendBeacon]", url);
+                    return true; 
+                }
+                arguments[0] = targetUrl;
+            } catch {}
+            return _sendBeacon.apply(navigator, arguments);
+        }
+    };
 
+    const sendBeacon = beaconContainer.sendBeacon;
     mark(sendBeacon, "function sendBeacon() { [native code] }");
     Object.defineProperties(sendBeacon, {
         name: { value: "sendBeacon", configurable: true },
