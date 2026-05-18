@@ -478,13 +478,8 @@
         name: { value: "WebSocket", configurable: true },
         length: { value: 1, configurable: true },
     });
-    
-    Object.defineProperty(window, "WebSocket", { 
-        value: FakeWebSocket, 
-        writable: true, 
-        configurable: true, 
-        enumerable: false 
-    });
+
+    window.WebSocket = FakeWebSocket;
 
 
     // =====================================================
