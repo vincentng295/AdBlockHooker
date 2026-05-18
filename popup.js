@@ -1,9 +1,12 @@
 const defaultUrl = "https://raw.githubusercontent.com/bigdargon/hostsVN/master/hosts";
 const statusDiv = document.getElementById('status');
 const hostUrlInput = document.getElementById('hostUrl');
+const toggleFakeSuccess = document.getElementById('toggleFakeSuccess');
 
 function updateUI(res) {
   hostUrlInput.value = res.hostsUrl || defaultUrl;
+  
+  toggleFakeSuccess.checked = res.fakeSuccess !== false;
 
   if (res.downloadStatus || res.blockedCount) {
     statusDiv.style.display = "block";
@@ -31,16 +34,20 @@ function updateUI(res) {
   }
 }
 
-chrome.storage.local.get(['hostsUrl', 'blockedCount', 'downloadStatus'], (res) => {
+chrome.storage.local.get(['hostsUrl', 'blockedCount', 'downloadStatus', 'fakeSuccess'], (res) => {
   updateUI(res);
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === 'local') {
-    chrome.storage.local.get(['hostsUrl', 'blockedCount', 'downloadStatus'], (res) => {
+    chrome.storage.local.get(['hostsUrl', 'blockedCount', 'downloadStatus', 'fakeSuccess'], (res) => {
       updateUI(res);
     });
   }
+});
+
+toggleFakeSuccess.addEventListener('change', () => {
+  chrome.storage.local.set({ fakeSuccess: toggleFakeSuccess.checked });
 });
 
 document.getElementById('btnDownload').addEventListener('click', () => {
@@ -55,7 +62,7 @@ document.getElementById('btnDownload').addEventListener('click', () => {
   chrome.runtime.sendMessage({ action: "downloadHosts", url: url }, (response) => {
     if (chrome.runtime.lastError) {
       statusDiv.style.color = "red";
-      statusDiv.innerText = "Background script connection error.";
+      statusDiv.innerText = "Background script connection error. Please try again.";
     }
   });
 });

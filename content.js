@@ -1,9 +1,13 @@
-chrome.storage.local.get(['hostsData'], (result) => {
+chrome.storage.local.get(['hostsData', 'fakeSuccess'], (result) => {
     const blockedDomains = result.hostsData || {};
+    const fakeSuccess = result.fakeSuccess !== false; 
 
     window.addEventListener("GetAdblockHostsList", (event) => {
         window.dispatchEvent(new CustomEvent("SendAdblockHostsList", {
-            detail: blockedDomains
+            detail: {
+                hosts: blockedDomains,
+                fakeSuccess: fakeSuccess
+            }
         }));
     }, { once: true });
 

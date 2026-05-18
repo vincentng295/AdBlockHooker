@@ -108,8 +108,9 @@
 
     window.addEventListener("SendAdblockHostsList", (event) => {
         if (event.detail) {
-            BLOCKED_DOMAINS = event.detail;
-            console_log("[AdBlock Hook] Load successfully with", Object.keys(BLOCKED_DOMAINS).length, "domains");
+            BLOCKED_DOMAINS = event.detail.hosts || {};
+            FAKE_SUCCESS_ENABLED = event.detail.fakeSuccess !== false;
+            console_log("[AdBlock Hook] Load successfully with", Object.keys(BLOCKED_DOMAINS).length, "domains. FakeSuccess:", FAKE_SUCCESS_ENABLED);
         }
     }, { once: true });
 
@@ -304,18 +305,22 @@
                 }
                 if (isBlockList(__url)) {
                     console_log("[Blocked Fetch]", __url);
-                    const fakeResponse = new Response(JSON.stringify({ blocked: true }), {
-                        status: 200,
-                        statusText: "OK",
-                        headers: new Headers({ "Content-Type": "application/json" })
-                    });
-                    Object.defineProperty(fakeResponse, 'url', {
-                        value: __url,
-                        writable: false,
-                        configurable: true,
-                        enumerable: true
-                    });
-                    return Promise.resolve(fakeResponse);
+                    if (FAKE_SUCCESS_ENABLED) {
+                        const fakeResponse = new Response(JSON.stringify({ blocked: true }), {
+                            status: 200,
+                            statusText: "OK",
+                            headers: new Headers({ "Content-Type": "application/json" })
+                        });
+                        Object.defineProperty(fakeResponse, 'url', {
+                            value: __url,
+                            writable: false,
+                            configurable: true,
+                            enumerable: true
+                        });
+                        return Promise.resolve(fakeResponse);
+                    } else {
+                        return Promise.reject(new TypeError("Failed to fetch"));
+                    }
                 }
             } catch {}
             return _fetch.call(window, resource, config);
@@ -362,24 +367,40 @@
         try {
             if (this._isBlocked) {
                 console_log("[Blocked XHR Send]", this._url);
+                if (FAKE_SUCCESS_ENABLED) {
+                    Object.defineProperties(this, {
+                        'readyState': { value: 4, configurable: true, writable: false },
+                        'status': { value: 200, configurable: true, writable: false },
+                        'statusText': { value: 'OK', configurable: true, writable: false },
+                        'response': { value: '{}', configurable: true, writable: false },
+                        'responseText': { value: '{}', configurable: true, writable: false },
+                        'responseURL': { value: this._url, configurable: true, writable: false } 
+                    });
 
-                Object.defineProperties(this, {
-                    'readyState': { value: 4, configurable: true, writable: false },
-                    'status': { value: 200, configurable: true, writable: false },
-                    'statusText': { value: 'OK', configurable: true, writable: false },
-                    'response': { value: '{}', configurable: true, writable: false },
-                    'responseText': { value: '{}', configurable: true, writable: false },
-                    'responseURL': { value: this._url, configurable: true, writable: false } 
-                });
+                    setTimeout(() => {
+                        if (typeof this.onreadystatechange === 'function') this.onreadystatechange();
+                        if (typeof this.onload === 'function') this.onload();
+                        
+                        this.dispatchEvent(new Event('readystatechange'));
+                        this.dispatchEvent(new Event('load'));
+                    }, 1);}
+                else {
+                    Object.defineProperties(this, {
+                        'readyState': { value: 4, configurable: true, writable: false },
+                        'status': { value: 0, configurable: true, writable: false },
+                        'statusText': { value: '', configurable: true, writable: false },
+                        'response': { value: '', configurable: true, writable: false },
+                        'responseText': { value: '', configurable: true, writable: false }
+                    });
 
-                setTimeout(() => {
-                    if (typeof this.onreadystatechange === 'function') this.onreadystatechange();
-                    if (typeof this.onload === 'function') this.onload();
-                    
-                    this.dispatchEvent(new Event('readystatechange'));
-                    this.dispatchEvent(new Event('load'));
-                }, 1);
-
+                    setTimeout(() => {
+                        if (typeof this.onreadystatechange === 'function') this.onreadystatechange();
+                        if (typeof this.onerror === 'function') this.onerror();
+                        
+                        this.dispatchEvent(new Event('readystatechange'));
+                        this.dispatchEvent(new Event('error'));
+                    }, 1);
+                }
                 return;
             }
         } catch (e) {}
@@ -405,10 +426,18 @@
         let processedUrl = url;
 
         try {
-            if (typeof processUrl === "function") {
-                processedUrl = processUrl(url);
+            if (isBlockList(url)) {
+                console_log("[Blocked WebSocket]", url);
+                if (!FAKE_SUCCESS_ENABLED) {
+                    throw new DOMException("Failed to construct 'WebSocket': The URL '" + url + "' is blocked by network.", "NetworkError");
+                }
+                if (typeof processUrl === "function") {
+                    processedUrl = processUrl(url);
+                }
             }
-        } catch {}
+        } catch (e) {
+            if (e instanceof DOMException) throw e;
+        }
 
         const wsInstance = protocols !== undefined 
             ? new _WebSocket(processedUrl, protocols) 
