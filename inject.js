@@ -12,44 +12,42 @@
 
             const tagName = node.tagName;
             
-            if (["SCRIPT", "IMG", "IFRAME", "VIDEO", "AUDIO", "SOURCE"].includes(tagName)) {
+            if (["IMG", "IFRAME", "VIDEO", "AUDIO", "SOURCE"].includes(tagName)) {
                 const src = node.getAttribute("src");
                 if (src && isBlockList(src)) {
                     console_log("[Static Tag Blocked - SRC]", tagName, src);
                     node.removeAttribute("src");
-                    if (tagName === "SCRIPT") {
-                        const src = node.getAttribute("src");
-                        if (src && isBlockList(src)) {
-                            console_log("[Static Tag Blocked - SRC]", tagName, src);
-                            node.removeAttribute("src");
-                            let safeContent = ""; 
-                            if (window.trustedTypes) {
-                                if (!__adblockTrustedPolicy) {
-                                    const defaultPolicy = window.trustedTypes.defaultPolicy;
-                                    if (defaultPolicy) {
-                                        __adblockTrustedPolicy = defaultPolicy
-                                    } else {
-                                        __adblockTrustedPolicy = window.trustedTypes.createPolicy("default");
-                                    }
-                                }
-                                try {
-                                    safeContent = __adblockTrustedPolicy.createScript("");
-                                } catch {
-                                    console_log("[TrustedTypes] Failed to create safe script content, fallback to empty string");
-                                }
-                            }
-
-                            try {
-                                node.textContent = safeContent;
-                            } catch (err) {
-                                node.remove();
-                            }
-                        }
-                    }
-                    node.remove(); 
                 }
             }
-            
+            else if (tagName === "SCRIPT") {
+                const src = node.getAttribute("src");
+                if (src && isBlockList(src)) {
+                    console_log("[Static Tag Blocked - SRC]", tagName, src);
+                    node.removeAttribute("src");
+                    let safeContent = ""; 
+                    if (window.trustedTypes) {
+                        if (!__adblockTrustedPolicy) {
+                            const defaultPolicy = window.trustedTypes.defaultPolicy;
+                            if (defaultPolicy) {
+                                __adblockTrustedPolicy = defaultPolicy
+                            } else {
+                                __adblockTrustedPolicy = window.trustedTypes.createPolicy("default");
+                            }
+                        }
+                        try {
+                            safeContent = __adblockTrustedPolicy.createScript("");
+                        } catch {
+                            console_log("[TrustedTypes] Failed to create safe script content, fallback to empty string");
+                        }
+                    }
+
+                    try {
+                        node.textContent = safeContent;
+                    } catch (err) {
+                        node.remove();
+                    }
+                }
+            }
             else if (["LINK", "A"].includes(tagName)) {
                 const href = node.getAttribute("href");
                 if (href && isBlockList(href)) {
@@ -217,12 +215,14 @@
     if (descContentWindow && descContentWindow.get) {
         const customContentWindowGetter = function() {
             const win = descContentWindow.get.call(this);
-            if (win && win.Function && win.Function.prototype) {
-                try {
+            try {
+                if (win && win.Function && win.Function.prototype) {
                     if (win.Function.prototype.toString !== customToString) {
                         win.Function.prototype.toString = customToString;
                     }
-                } catch(e) {}
+                }
+            } catch(e) {
+                undefined;
             }
             return win;
         };
@@ -237,12 +237,14 @@
     if (descContentDocument && descContentDocument.get) {
         const customContentDocumentGetter = function() {
             const doc = descContentDocument.get.call(this);
-            if (doc && doc.defaultView && doc.defaultView.Function && doc.defaultView.Function.prototype) {
-                try {
+            try {
+                if (doc && doc.defaultView && doc.defaultView.Function && doc.defaultView.Function.prototype) {
                     if (doc.defaultView.Function.prototype.toString !== customToString) {
                         doc.defaultView.Function.prototype.toString = customToString;
                     }
-                } catch(e) {}
+                }
+            } catch(e) {
+                undefined;
             }
             return doc;
         };
