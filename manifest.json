@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "AdBlock Based-Hook Extension",
+  "version": "1.0",
+  "description": "Adblock based on Hooking technique, helps block ads more effectively and is hard to be detected by other ad blockers.",
+  "permissions": [
+    "storage"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "adblock.png",
+      "48": "adblock.png",
+      "128": "adblock.png",
+      "512": "adblock.png"
+    }
+  },
+  "icons": {
+    "16": "adblock.png",
+    "48": "adblock.png",
+    "128": "adblock.png",
+    "512": "adblock.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
