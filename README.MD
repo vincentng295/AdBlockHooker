@@ -14,14 +14,32 @@ A lightweight ad blocking Chrome Extension based on the **Hook API (Monkey Patch
 
 ---
 
-## 🚀 Installation instructions (Developer Mode)
+## 🚀 Installation instructions
 
-1. **Download source code:** Download the entire folder containing the above files to your computer.
+### Chrome (Windows)
+
+1. **Download source code:** Download the latest [Source code (zip)](https://github.com/vincentng295/AdBlockHooker/releases/latest) and extract it.
 2. **Open the Extension Management page:** Access the path `chrome://extensions/` on Chrome browser (or Edge, Opera, Brave).
 3. **Enable Developer Mode:** Flip the **Developer mode** switch in the top right corner to **On** state.
 4. **Load Extension:** Click the **Load unpacked** button in the upper left corner, then point to the folder containing the source code of this Extension.
 5. **Pin Extension:** Find the extension named *AdBlock Based-Hook Extension* and pin it to the toolbar for easy use.
 
+
+### Android (Kiwi Browser / Edge Canary)
+
+Since standard mobile browsers do not support custom extension injection via unpacked folders, you can use specialized browsers like Kiwi Browser or Edge Canary to run this extension on Android.
+
+#### Option A: Using [Kiwi Browser](https://github.com/kiwibrowser/src.next) (Recommended & Easiest)
+1. **Download CRX:** Download the latest [AdBlockHooker.crx](https://github.com/vincentng295/AdBlockHooker/releases/latest/download/AdBlockHooker.crx) directly to your Android device. *(No need to extract it, Kiwi can read .crx files directly!)*
+2. **Open the Extension Management page:** Tap the three dots menu (⋮) in the top-right corner, select **Extensions** (or type `chrome://extensions/` in the address bar).
+3. **Enable Developer Mode:** Turn on the **Developer mode** toggle switch.
+4. **Load Extension:** Tap the **+(from .zip/.crx/.user.js)** button, then select the `AdBlockHooker.crx` file from your device storage.
+5. **Configuration:** The extension is now active. You can find its settings under the three dots menu (⋮) at the very bottom.
+
+#### Option B: Using Edge Canary (Advanced)
+1. **Download CRX:** Download the latest [AdBlockHooker.crx](https://github.com/vincentng295/AdBlockHooker/releases/latest/download/AdBlockHooker.crx) directly to your Android device. *(No need to extract it, Edge Canary can read .crx files directly!)*
+2. **Enable Developer Options in Edge Canary:** On your Android device, open Edge Canary, go to **Settings** > **About Microsoft Edge**. Tap the Edge Build Version logo 5-7 times rapidly until a "Developer Options" notification appears.
+3. **Install:** Go back to the main Settings menu, enter **Developer Options** and tap on **Extension install by crx**, then tap the **Choose .crx file** and select the `AdBlockHooker.crx` file from your device storage. Tap **OK** to complete install.
 ---
 
 ## 📖 Instructions for use
