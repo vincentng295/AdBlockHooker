@@ -5,18 +5,28 @@ const hostUrlInput = document.getElementById('hostUrl');
 function updateUI(res) {
   hostUrlInput.value = res.hostsUrl || defaultUrl;
 
+  if (res.downloadStatus || res.blockedCount) {
+    statusDiv.style.display = "block";
+  } else {
+    statusDiv.style.display = "none";
+  }
+
   if (res.downloadStatus) {
     statusDiv.innerText = res.downloadStatus.message;
     
     if (res.downloadStatus.state === "loading") {
-      statusDiv.style.color = "black";
+      statusDiv.style.background = "var(--status-info-bg)";
+      statusDiv.style.color = "var(--status-info-text)";
     } else if (res.downloadStatus.state === "success") {
-      statusDiv.style.color = "green";
+      statusDiv.style.background = "var(--status-success-bg)";
+      statusDiv.style.color = "var(--status-success-text)";
     } else if (res.downloadStatus.state === "error") {
-      statusDiv.style.color = "red";
+      statusDiv.style.background = "var(--status-error-bg)";
+      statusDiv.style.color = "var(--status-error-text)";
     }
   } else if (res.blockedCount) {
-    statusDiv.style.color = "black";
+    statusDiv.style.background = "var(--status-info-bg)";
+    statusDiv.style.color = "var(--status-info-text)";
     statusDiv.innerText = `Blocking: ${res.blockedCount} domains.`;
   }
 }
