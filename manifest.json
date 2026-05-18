@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AdBlock Based-Hook Extension",
-  "version": "1.1",
+  "version": "1.2",
   "description": "Adblock based on Hooking technique, helps block ads more effectively and is hard to be detected by other ad blockers.",
   "permissions": [
     "storage"
