@@ -56,6 +56,7 @@ The system uses advanced Proxy techniques to interfere with JavaScript reflector
 
 * Override `Function.prototype.toString` so that when calling `.toString()` on `fetch` or `open`, the browser always returns `function fetch() { [native code] }`.
 * Override `Object.getOwnPropertyDescriptor` so that when anti-adblock scripts intentionally strip the `set` attribute of `HTMLScriptElement.prototype.src`, the system will return the browser's original Setter function, completely hiding the existence of the Proxy.
+* Check the detection at [https://vincentng295.github.io/hook-js-detection](https://vincentng295.github.io/hook-js-detection/)
 
 ---
 
