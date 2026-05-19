@@ -11,8 +11,9 @@
       --accent-color: #5271ff;
       --accent-hover: #3b56d9;
       --border-color: #3f3f46;
+      --success-color: #2ed573;
+      --error-color: #ff4757;
       
-      /* Màu cho các trạng thái */
       --status-info-bg: rgba(82, 113, 255, 0.15);
       --status-info-text: #708aff;
       --status-success-bg: rgba(46, 213, 115, 0.15);
@@ -22,8 +23,8 @@
     }
 
     body {
-      width: 360px;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      width: 380px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background-color: var(--bg-primary);
       color: var(--text-main);
       padding: 16px;
@@ -31,12 +32,11 @@
       box-sizing: border-box;
     }
 
-    /* Header */
     .header {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
     .header img {
@@ -49,50 +49,109 @@
       margin: 0;
       font-size: 16px;
       font-weight: 600;
-      letter-spacing: -0.3px;
     }
 
-    /* Form Group */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
     .form-group {
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
     .form-group label {
       display: block;
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-muted);
       margin-bottom: 6px;
-      font-weight: 500;
+      font-weight: 600;
+      letter-spacing: 0.5px;
     }
 
-    .input-wrapper {
-      position: relative;
+    .url-input-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .url-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
     }
 
     input[type="text"] {
-      width: 100%;
-      padding: 10px 12px;
-      background-color: var(--bg-surface);
+      flex: 1;
+      padding: 9px 12px;
+      background-color: #1a1a20;
       border: 1px solid var(--border-color);
-      border-radius: 8px;
+      border-radius: 6px;
       color: var(--text-main);
-      font-size: 13px;
+      font-size: 12.5px;
       box-sizing: border-box;
-      transition: all 0.2s ease;
     }
 
     input[type="text"]:focus {
       outline: none;
       border-color: var(--accent-color);
-      box-shadow: 0 0 0 3px rgba(82, 113, 255, 0.25);
     }
 
-    input[type="text"]::placeholder {
-      color: #5a5f6a;
+    .btn-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+      color: white;
+      flex-shrink: 0;
     }
 
-    /* Button */
-    button {
+    .btn-add { background-color: var(--success-color); }
+    .btn-remove { background-color: var(--error-color); }
+
+    .file-upload-btn {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+      padding: 8px;
+      background: #25252d;
+      border: 1px dashed var(--border-color);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .file-upload-btn:hover {
+      color: var(--text-main);
+      border-color: var(--text-muted);
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+    }
+
+    .toggle-label {
+      font-size: 12.5px;
+      font-weight: 500;
+    }
+
+    .btn-primary {
       width: 100%;
       padding: 11px;
       background: var(--accent-color);
@@ -102,40 +161,20 @@
       cursor: pointer;
       font-size: 13px;
       font-weight: 600;
-      transition: all 0.2s ease;
       box-shadow: 0 4px 12px rgba(82, 113, 255, 0.2);
     }
 
-    button:hover {
-      background: var(--accent-hover);
-      transform: translateY(-1px);
-    }
+    .btn-primary:hover { background: var(--accent-hover); }
 
-    button:active {
-      transform: translateY(0);
-    }
-
-    /* Container Trạng thái (Ẩn mặc định, hiện khi có text) */
     #status {
-      margin-top: 14px;
-      font-size: 12.5px;
-      line-height: 1.5;
-      padding: 10px 12px;
+      margin-top: 12px;
+      font-size: 12px;
+      line-height: 1.4;
+      padding: 10px;
       border-radius: 8px;
-      max-height: 80px;
+      max-height: 75px;
       overflow-y: auto;
-      box-sizing: border-box;
-      display: none; /* Chỉ hiện khi có nội dung */
-      transition: all 0.3s ease;
-    }
-
-    /* Custom Scrollbar cho status nếu text quá dài */
-    #status::-webkit-scrollbar {
-      width: 4px;
-    }
-    #status::-webkit-scrollbar-thumb {
-      background: rgba(255,255,255,0.1);
-      border-radius: 4px;
+      display: none;
     }
   </style>
 </head>
@@ -143,21 +182,43 @@
 
   <div class="header">
     <img src="adblock.png" alt="logo" onerror="this.style.display='none'">
-    <h3>AdBlock Hook Config</h3>
+    <h3>AdBlock Hook Dashboard</h3>
   </div>
 
-  <div class="form-group">
-    <label for="hostUrl">HOSTS SOURCE URL</label>
-    <div class="input-wrapper">
-      <input type="text" id="hostUrl" placeholder="https://example.com/hosts.txt">
+  <div class="card" style="border-color: rgba(82, 113, 255, 0.3);">
+    <div class="toggle-row">
+      <span class="toggle-label" style="color: #708aff; font-weight: 600;">Don't block ads this page</span>
+      <input type="checkbox" id="toggleWhitelist" style="cursor: pointer; transform: scale(1.2);">
     </div>
   </div>
-  <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-    <label for="toggleFakeSuccess" style="margin-bottom: 0; cursor: pointer;">Redirect to fake success response instead of directly blocking or disconnecting</label>
-    <input type="checkbox" id="toggleFakeSuccess" style="width: auto; cursor: pointer;" checked>
+
+  <div class="card">
+    <div class="form-group">
+      <label>HOSTS ONLINE SOURCES</label>
+      <div id="urlContainer" class="url-input-container">
+        </div>
+      <button id="btnAddUrl" class="btn-icon btn-add" style="width: 100%; margin-top: 4px;">+</button>
+    </div>
   </div>
 
-  <button id="btnDownload">Download & Update</button>
+  <div class="card">
+    <div class="form-group" style="margin-bottom: 0;">
+      <label>CUSTOM LOCAL HOSTS (.TXT)</label>
+      <label class="file-upload-btn" for="fileInput">
+        <span id="fileNameLabel">📁 Choose or Drop a .txt hosts file</span>
+      </label>
+      <input type="file" id="fileInput" accept=".txt" style="display: none;">
+    </div>
+  </div>
+
+  <div class="card" style="padding: 10px 12px; margin-bottom: 16px;">
+    <div class="toggle-row">
+      <span class="toggle-label" style="font-size: 11.5px; color: var(--text-muted);">Redirect to fake success response instead of direct blocking</span>
+      <input type="checkbox" id="toggleFakeSuccess" style="cursor: pointer;">
+    </div>
+  </div>
+
+  <button id="btnDownload" class="btn-primary">Sync & Update All Lists</button>
 
   <div id="status"></div>
 

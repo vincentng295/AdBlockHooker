@@ -1,71 +1,84 @@
 (function () {
     const console_log = console.log;
+    const console_error = console.error;
     let BLOCKED_DOMAINS = {};
+    let IS_WHITELISTED_PAGE = false;
     let __adblockTrustedPolicy = null;
 
     // =====================================================
     // STATIC TAGS INTERCEPTOR (MUTATION OBSERVER)
     // =====================================================
-    const observeStaticTags = () => {
-        const checkAndSanitizeNode = (node) => {
-            if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const checkAndSanitizeNode = (node) => {
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
 
-            const tagName = node.tagName;
-            
-            if (["IMG", "IFRAME", "VIDEO", "AUDIO", "SOURCE"].includes(tagName)) {
-                const src = node.getAttribute("src");
-                if (src && isBlockList(src)) {
-                    console_log("[Static Tag Blocked - SRC]", tagName, src);
-                    node.removeAttribute("src");
-                }
+        const tagName = node.tagName;
+        
+        if (["IMG", "IFRAME", "VIDEO", "AUDIO", "SOURCE"].includes(tagName)) {
+            const src = node.getAttribute("src");
+            if (src && isBlockList(src)) {
+                console_log("[Static Tag Blocked - SRC]", tagName, src);
+                node.removeAttribute("src");
             }
-            else if (tagName === "SCRIPT") {
-                const src = node.getAttribute("src");
-                if (src && isBlockList(src)) {
-                    console_log("[Static Tag Blocked - SRC]", tagName, src);
-                    node.removeAttribute("src");
-                    let safeContent = ""; 
-                    if (window.trustedTypes) {
-                        if (!__adblockTrustedPolicy) {
-                            const defaultPolicy = window.trustedTypes.defaultPolicy;
-                            if (defaultPolicy) {
-                                __adblockTrustedPolicy = defaultPolicy
-                            } else {
-                                __adblockTrustedPolicy = window.trustedTypes.createPolicy("default");
-                            }
-                        }
-                        try {
-                            safeContent = __adblockTrustedPolicy.createScript("");
-                        } catch {
-                            console_log("[TrustedTypes] Failed to create safe script content, fallback to empty string");
+        }
+        else if (tagName === "SCRIPT") {
+            const src = node.getAttribute("src");
+            if (src && isBlockList(src)) {
+                console_log("[Static Tag Blocked - SRC]", tagName, src);
+                node.removeAttribute("src");
+                let safeContent = ""; 
+                if (window.trustedTypes) {
+                    if (!__adblockTrustedPolicy) {
+                        const defaultPolicy = window.trustedTypes.defaultPolicy;
+                        if (defaultPolicy) {
+                            __adblockTrustedPolicy = defaultPolicy
+                        } else {
+                            __adblockTrustedPolicy = window.trustedTypes.createPolicy("default");
                         }
                     }
-
                     try {
-                        node.textContent = safeContent;
-                    } catch (err) {
-                        node.remove();
+                        safeContent = __adblockTrustedPolicy.createScript("");
+                    } catch {
+                        console_log("[TrustedTypes] Failed to create safe script content, fallback to empty string");
                     }
                 }
-            }
-            else if (["LINK", "A"].includes(tagName)) {
-                const href = node.getAttribute("href");
-                if (href && isBlockList(href)) {
-                    console_log("[Static Tag Blocked - HREF]", tagName, href);
-                    node.removeAttribute("href");
+
+                try {
+                    node.textContent = safeContent;
+                } catch (err) {
                     node.remove();
                 }
             }
-            
-            else if (tagName === "FORM") {
-                const action = node.getAttribute("action");
-                if (action && isBlockList(action)) {
-                    console_log("[Static Tag Blocked - ACTION]", tagName, action);
-                    node.setAttribute("action", "javascript:void(0);");
-                }
+        }
+        else if (tagName === "LINK") {
+            const href = node.getAttribute("href");
+            if (href && isBlockList(href)) {
+                console_log("[Static Tag Blocked - LINK HREF]", href);
+                node.removeAttribute("href");
+                node.remove();
             }
-        };
-
+        }
+        else if (tagName === "A") {
+            const href = node.getAttribute("href");
+            if (href && isBlockList(href)) {
+                console_log("[Static Tag Blocked - A HREF]", href);
+                node.setAttribute("href", "javascript:void(0);");
+                node.style.setProperty('display', 'none', 'important');
+                node.style.setProperty('pointer-events', 'none', 'important');
+                node.style.setProperty('visibility', 'hidden', 'important');
+                node.style.setProperty('width', '0px', 'important');
+                node.style.setProperty('height', '0px', 'important');
+            }
+        }
+        
+        else if (tagName === "FORM") {
+            const action = node.getAttribute("action");
+            if (action && isBlockList(action)) {
+                console_log("[Static Tag Blocked - ACTION]", tagName, action);
+                node.setAttribute("action", "javascript:void(0);");
+            }
+        }
+    };
+    const observeStaticTags = () => {
         const domObserver = new MutationObserver((mutations) => {
             for (let i = 0; i < mutations.length; i++) {
                 const addedNodes = mutations[i].addedNodes;
@@ -104,11 +117,45 @@
         }, 0);
     }
 
+    // =====================================================
+    // GLOBAL CLICK INTERCEPTOR (FOR BAD A-HREF LINKS)
+    // =====================================================
+    window.addEventListener('click', function(event) {
+        const anchor = event.target.closest('a');
+        if (!anchor) return;
+
+        try {
+            const href = anchor.getAttribute('href') || anchor.href;
+            
+            if (href && typeof href === "string") {
+                if (isBlockList(href)) {
+                    console_log("[Blocked Dangerous Link Click]", href);
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.stopImmediatePropagation();
+                    anchor.style.display = "none";
+                    return false;
+                }
+            }
+        } catch (e) {}
+    }, true);
+
     window.addEventListener("SendAdblockHostsList", (event) => {
         if (event.detail) {
             BLOCKED_DOMAINS = event.detail.hosts || {};
             FAKE_SUCCESS_ENABLED = event.detail.fakeSuccess !== false;
-            console_log("[AdBlock Hook] Load successfully with", Object.keys(BLOCKED_DOMAINS).length, "domains. FakeSuccess:", FAKE_SUCCESS_ENABLED);
+            IS_WHITELISTED_PAGE = !!event.detail.isWhitelisted;
+            
+            if (IS_WHITELISTED_PAGE) {
+                console_log("[AdBlock Hook] Whitelisted page! System bypassed for this site.");
+            } else {
+                console_log("[AdBlock Hook] Load successfully with", Object.keys(BLOCKED_DOMAINS).length, "domains. FakeSuccess:", FAKE_SUCCESS_ENABLED);
+                if (typeof checkAndSanitizeNode === "function") {
+                    console_log("[AdBlock Hook] Sanitizing existing static tags on page...");
+                    const existingElements = document.querySelectorAll("script, img, iframe, video, audio, source, link, a, form");
+                    existingElements.forEach(checkAndSanitizeNode);
+                }
+            }
         }
     }, { once: true });
 
@@ -116,6 +163,7 @@
 
     // ===== URL PROCESSOR =====
     function isBlockList(urlStr) {
+        if (IS_WHITELISTED_PAGE) return false;
         if (!urlStr || typeof urlStr !== "string") return false;
         
         try {
@@ -160,6 +208,7 @@
     const _toString = Function.prototype.toString;
     const _bind = Function.prototype.bind;
     const _sendBeacon = navigator.sendBeacon;
+    const _winopen = window.open;
     const _getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
 
     // ===== NATIVE MASK SYSTEM =====
@@ -506,4 +555,88 @@
         length: { value: 2, configurable: true },
     });
     navigator.sendBeacon = sendBeacon;
+
+    // =====================================================
+    // POP-UP & POP-UNDER BLOCKER (WINDOW.OPEN INTERCEPTOR)
+    // =====================================================
+    const windowOpenContainer = {
+        open(url, target, features) {
+            try {
+                if (url && typeof url === "string") {
+                    const targetUrl = processUrl(url);
+                    if (isBlockList(targetUrl)) {
+                        console_log("[Blocked Pop-up/New Tab]", url);
+                        return new Proxy(window, {
+                            get(t, prop) {
+                                if (prop === 'closed') return false;
+                                if (prop === 'focus') return () => {};
+                                if (prop === 'blur') return () => {};
+                                if (prop === 'close') return () => {};
+                                return undefined;
+                            }
+                        });
+                    }
+                    arguments[0] = targetUrl;
+                }
+            } catch (e) {}
+            return _winopen.apply(window, arguments);
+        }
+    };
+
+    const fakeOpen = windowOpenContainer.open;
+    mark(fakeOpen, "function open() { [native code] }");
+    Object.defineProperties(fakeOpen, {
+        name: { value: "open", configurable: true },
+        length: { value: 1, configurable: true }
+    });
+    window.open = fakeOpen;
+
+
+    // =====================================================
+    // NAVIGATION & REDIRECT BLOCKER (LOCATION INTERCEPTOR)
+    // =====================================================
+    try {
+        const locationProto = Object.getPrototypeOf(window.location) === Location.prototype ? Location.prototype : window.location;
+        const originalLocationSet = Object.getOwnPropertyDescriptor(Location.prototype, 'href').set;
+        Object.defineProperty(Location.prototype, 'href', {
+            set: function(url) {
+                try {
+                    if (url && typeof url === "string" && isBlockList(processUrl(url))) {
+                        console_log("[Blocked Page Redirect via href]", url);
+                        return;
+                    }
+                } catch (e) {}
+                return originalLocationSet.call(this, url);
+            },
+            configurable: true,
+            enumerable: true
+        });
+
+        const _assign = Location.prototype.assign;
+        Location.prototype.assign = function(url) {
+            try {
+                if (url && typeof url === "string" && isBlockList(processUrl(url))) {
+                    console_log("[Blocked Page Redirect via assign()]", url);
+                    return;
+                }
+            } catch (e) {}
+            return _assign.apply(this, arguments);
+        };
+        mark(Location.prototype.assign, "function assign() { [native code] }");
+
+        const _replace = Location.prototype.replace;
+        Location.prototype.replace = function(url) {
+            try {
+                if (url && typeof url === "string" && isBlockList(processUrl(url))) {
+                    console_log("[Blocked Page Redirect via replace()]", url);
+                    return;
+                }
+            } catch (e) {}
+            return _replace.apply(this, arguments);
+        };
+        mark(Location.prototype.replace, "function replace() { [native code] }");
+
+    } catch (err) {
+        console_error("[AdBlock Hook] Failed to lock Location Prototype:", err);
+    }
 })();

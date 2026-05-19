@@ -1,10 +1,11 @@
 {
   "manifest_version": 3,
   "name": "AdBlock Based-Hook Extension",
-  "version": "1.4",
+  "version": "1.5",
   "description": "Adblock based on Hooking technique, helps block ads more effectively and is hard to be detected by other ad blockers.",
   "permissions": [
-    "storage"
+    "storage",
+    "activeTab"
   ],
   "background": {
     "service_worker": "background.js"

@@ -1,53 +1,66 @@
-const defaultUrl = "https://raw.githubusercontent.com/bigdargon/hostsVN/master/hosts";
-
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "downloadHosts") {
-    downloadAndParseHosts(message.url);
+    const targetUrls = message.urls || [];
+    const localDomains = message.localDomains || {};
+    
+    downloadAndParseMultipleHosts(targetUrls, localDomains);
     sendResponse({ status: "started" }); 
   }
   return true;
 });
 
-async function downloadAndParseHosts(url) {
+async function downloadAndParseMultipleHosts(urls, localDomains) {
   try {
     await chrome.storage.local.set({ 
-      downloadStatus: { state: "loading", message: "Downloading hosts list..." } 
+      downloadStatus: { state: "loading", message: "Aggregating and Compiling all hosts sources..." } 
     });
 
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("Cannot download file from this URL.");
-    
-    const text = await response.text();
-    
-    const lines = text.split('\n');
-    const blockedDomains = {};
-    
-    lines.forEach(line => {
-      line = line.trim();
-      if (!line || line.startsWith('#')) return;
-      
-      const parts = line.split(/\s+/);
-      if (parts.length >= 2) {
-        const domain = parts[1].trim().toLowerCase();
-        blockedDomains[domain] = true;
+    const combinedBlockedDomains = { ...localDomains };
+
+    for (const url of urls) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          console.error(`Skipped error link: ${url}`);
+          continue;
+        }
+        
+        const text = await response.text();
+        const lines = text.split('\n');
+        
+        lines.forEach(line => {
+          line = line.trim();
+          if (!line || line.startsWith('#')) return;
+          
+          const parts = line.split(/\s+/);
+          if (parts.length >= 2) {
+            const domain = parts[1].trim().toLowerCase();
+            combinedBlockedDomains[domain] = true;
+          } else if (parts.length === 1 && parts[0]) {
+            const domain = parts[0].trim().toLowerCase();
+            combinedBlockedDomains[domain] = true;
+          }
+        });
+      } catch (e) {
+        console.error(`Error connecting to source: ${url}`, e);
       }
-    });
+    }
 
-    const domainCount = Object.keys(blockedDomains).length;
+    const totalCount = Object.keys(combinedBlockedDomains).length;
 
     await chrome.storage.local.set({ 
-      hostsUrl: url, 
-      hostsData: blockedDomains,
-      blockedCount: domainCount,
+      hostsUrls: urls, 
+      hostsData: combinedBlockedDomains,
+      blockedCount: totalCount,
       downloadStatus: { 
         state: "success", 
-        message: `Success! Downloaded and saved ${domainCount} domains. Please refresh the web pages.` 
+        message: `Successfully combined ${totalCount} unique domains from all online & local sources!` 
       }
     });
 
   } catch (error) {
     await chrome.storage.local.set({ 
-      downloadStatus: { state: "error", message: "Error: " + error.message } 
+      downloadStatus: { state: "error", message: "Failed to compile database: " + error.message } 
     });
   }
 }

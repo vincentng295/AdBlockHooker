@@ -1,12 +1,16 @@
-chrome.storage.local.get(['hostsData', 'fakeSuccess'], (result) => {
+chrome.storage.local.get(['hostsData', 'fakeSuccess', 'whitelistDomains'], (result) => {
     const blockedDomains = result.hostsData || {};
     const fakeSuccess = result.fakeSuccess !== false; 
+    const whitelist = result.whitelistDomains || {};
+    const currentHost = window.location.hostname.toLowerCase();
+    const isWhitelisted = !!whitelist[currentHost];
 
     window.addEventListener("GetAdblockHostsList", (event) => {
         window.dispatchEvent(new CustomEvent("SendAdblockHostsList", {
             detail: {
                 hosts: blockedDomains,
-                fakeSuccess: fakeSuccess
+                fakeSuccess: fakeSuccess,
+                isWhitelisted: isWhitelisted
             }
         }));
     }, { once: true });
