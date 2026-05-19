@@ -1,3 +1,10 @@
+const script = document.createElement('script');
+script.src = chrome.runtime.getURL('inject.js');
+script.onload = function() {
+    this.remove();
+};
+(document.head || document.documentElement).appendChild(script);
+
 chrome.storage.local.get(['hostsData', 'fakeSuccess', 'whitelistDomains'], (result) => {
     const blockedDomains = result.hostsData || {};
     const fakeSuccess = result.fakeSuccess !== false; 
@@ -5,7 +12,7 @@ chrome.storage.local.get(['hostsData', 'fakeSuccess', 'whitelistDomains'], (resu
     const currentHost = window.location.hostname.toLowerCase();
     const isWhitelisted = !!whitelist[currentHost];
 
-    window.addEventListener("GetAdblockHostsList", (event) => {
+    const sendDataToInject = () => {
         window.dispatchEvent(new CustomEvent("SendAdblockHostsList", {
             detail: {
                 hosts: blockedDomains,
@@ -13,12 +20,11 @@ chrome.storage.local.get(['hostsData', 'fakeSuccess', 'whitelistDomains'], (resu
                 isWhitelisted: isWhitelisted
             }
         }));
+    };
+
+    window.addEventListener("GetAdblockHostsList", (event) => {
+        sendDataToInject();
     }, { once: true });
 
-    const script = document.createElement('script');
-    script.src = chrome.runtime.getURL('inject.js');
-    script.onload = function() {
-        this.remove();
-    };
-    (document.head || document.documentElement).appendChild(script);
+    sendDataToInject();
 });

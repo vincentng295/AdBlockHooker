@@ -3,6 +3,7 @@
     const console_error = console.error;
     let BLOCKED_DOMAINS = {};
     let IS_WHITELISTED_PAGE = false;
+    let IS_HOSTS_LOADED = false
     let __adblockTrustedPolicy = null;
 
     // =====================================================
@@ -145,6 +146,7 @@
             BLOCKED_DOMAINS = event.detail.hosts || {};
             FAKE_SUCCESS_ENABLED = event.detail.fakeSuccess !== false;
             IS_WHITELISTED_PAGE = !!event.detail.isWhitelisted;
+            IS_HOSTS_LOADED = true;
             
             if (IS_WHITELISTED_PAGE) {
                 console_log("[AdBlock Hook] Whitelisted page! System bypassed for this site.");
@@ -348,11 +350,21 @@
     // FETCH HOOK
     // =====================================================
     const fetchContainer = {
-        fetch(resource, config) {
+        async fetch(resource, config) {
             try {
                 let __url = resource;
                 if (resource instanceof Request) {
                     __url = resource.url;
+                }
+                if (!IS_HOSTS_LOADED) {
+                    await new Promise(resolve => {
+                        const checkInterval = setInterval(() => {
+                            if (IS_HOSTS_LOADED) {
+                                clearInterval(checkInterval);
+                                resolve();
+                            }
+                        }, 100);
+                    });
                 }
                 if (isBlockList(__url)) {
                     console_log("[Blocked Fetch]", __url);
@@ -684,4 +696,12 @@
     } catch (err) {
         console_error("[AdBlock Cloak] Initialization failed", err);
     }
+
+    // Wait unil hosts are loaded before allowing page to load fully
+    const checkHostsLoaded = setInterval(() => {
+        if (IS_HOSTS_LOADED) {
+            clearInterval(checkHostsLoaded);
+            console_log("[AdBlock Hook] Hosts loaded, page is now fully protected.");
+        }
+    }, 100);
 })();
