@@ -639,4 +639,49 @@
     } catch (err) {
         console_error("[AdBlock Hook] Failed to lock Location Prototype:", err);
     }
+
+    // =====================================================
+    // CLOAKING ENGINE V3 - ANTI-DETECTION & ANONYMITY ENHANCEMENTS
+    // =====================================================
+    try {
+        const sanitizeStackString = (stackStr) => {
+            if (!stackStr || typeof stackStr !== "string") return stackStr;
+            return stackStr.split('\n').filter(line => {
+                return !line.includes('chrome-extension://') && !line.includes('inject.js');
+            }).join('\n');
+        };
+        const originalGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+        Object.getOwnPropertyDescriptor = new Proxy(originalGetOwnPropertyDescriptor, {
+            apply(target, thisArg, args) {
+                const obj = args[0];
+                const prop = args[1];
+                const desc = Reflect.apply(target, thisArg, args);
+                
+                if (prop === 'stack' && desc) {
+                    if (desc.get) {
+                        const origGet = desc.get;
+                        desc.get = function() { return sanitizeStackString(origGet.call(this)); };
+                    } else if ('value' in desc) {
+                        desc.value = sanitizeStackString(desc.value);
+                    }
+                }
+                return desc;
+            }
+        });
+        mark(Object.getOwnPropertyDescriptor, "function getOwnPropertyDescriptor() { [native code] }");
+
+        if (Error.captureStackTrace) {
+            const originalPrepare = Error.prepareStackTrace;
+            Error.prepareStackTrace = function (error, structuredStackTrace) {
+                const result = originalPrepare ? originalPrepare(error, structuredStackTrace) : String(error);
+                if (typeof result === 'string') {
+                    return sanitizeStackString(result);
+                }
+                return result;
+            };
+        }
+        console_log("[AdBlock Cloak] Stealth Cloaking Engine V3 fully deployed.");
+    } catch (err) {
+        console_error("[AdBlock Cloak] Initialization failed", err);
+    }
 })();
