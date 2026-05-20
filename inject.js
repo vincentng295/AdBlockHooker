@@ -697,11 +697,33 @@
         console_error("[AdBlock Cloak] Initialization failed", err);
     }
 
+    // Unhook function for whitelisted pages or debugging
+    function unhookAllFunctions() {
+        try {
+            window.fetch = _fetch;
+            XMLHttpRequest.prototype.open = _open;
+            XMLHttpRequest.prototype.send = _send;
+            window.WebSocket = _WebSocket;
+            navigator.sendBeacon = _sendBeacon;
+            window.open = _winopen;
+            Function.prototype.toString = _toString;
+            Function.prototype.bind = _bind;
+            Object.getOwnPropertyDescriptor = _getOwnPropertyDescriptor;
+            console_log("[AdBlock Hook] All functions unhooked successfully.");
+        } catch (e) {
+            console_error("[AdBlock Hook] Failed to unhook all functions:", e);
+        }
+    }
+
     // Wait unil hosts are loaded before allowing page to load fully
     const checkHostsLoaded = setInterval(() => {
         if (IS_HOSTS_LOADED) {
             clearInterval(checkHostsLoaded);
             console_log("[AdBlock Hook] Hosts loaded, page is now fully protected.");
+            if (IS_WHITELISTED_PAGE) {
+                console_log("[AdBlock Hook] Note: This page is whitelisted, so unhook all hooked functions.");
+                unhookAllFunctions();
+            }
         }
     }, 100);
 })();
