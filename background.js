@@ -64,3 +64,41 @@ async function downloadAndParseMultipleHosts(urls, localDomains) {
     });
   }
 }
+
+// Helper function to check if a URL is in your adblock list
+function isUrlBlocked(urlStr, blockedDomains) {
+  if (!urlStr || typeof urlStr !== "string") return false;
+  try {
+    let hostname = urlStr.replace(/^(.*?:\/\/)?(www\.)?/, '').split('/')[0].split('?')[0];
+    hostname = hostname.split(':')[0].toLowerCase(); 
+
+    let currentDomain = hostname;
+    while (currentDomain) {
+      if (blockedDomains[currentDomain]) return true;
+      const dotIndex = currentDomain.indexOf('.');
+      if (dotIndex === -1) break;
+      currentDomain = currentDomain.substring(dotIndex + 1);
+    }
+  } catch (e) {}
+  return false;
+}
+
+// Listen for new window/tab creation targets
+chrome.webNavigation.onCreatedNavigationTarget.addListener((details) => {
+  const targetUrl = details.url;
+  const targetTabId = details.tabId; // The ID of the newly created window/tab
+
+  chrome.storage.local.get(['hostsData'], (result) => {
+    const blockedDomains = result.hostsData || {};
+
+    // If the target URL is in the adblock list, CLOSE the new window/tab immediately!
+    if (isUrlBlocked(targetUrl, blockedDomains)) {
+      console.log(`[AdBlock Window] URL inside adblock list detected: ${targetUrl}. Closing window...`);
+      
+      // Force close the newly created about:blank window/tab instantly
+      chrome.tabs.remove(targetTabId).catch((err) => {
+        console.log("[AdBlock Window] Tab already closed or could not be removed:", err);
+      });
+    }
+  });
+});

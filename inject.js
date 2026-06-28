@@ -603,55 +603,6 @@
     });
     window.open = fakeOpen;
 
-
-    // =====================================================
-    // NAVIGATION & REDIRECT BLOCKER (LOCATION INTERCEPTOR)
-    // =====================================================
-    try {
-        const locationProto = Object.getPrototypeOf(window.location) === Location.prototype ? Location.prototype : window.location;
-        const originalLocationSet = Object.getOwnPropertyDescriptor(Location.prototype, 'href').set;
-        Object.defineProperty(Location.prototype, 'href', {
-            set: function(url) {
-                try {
-                    if (url && typeof url === "string" && isBlockList(processUrl(url))) {
-                        console_log("[Blocked Page Redirect via href]", url);
-                        return;
-                    }
-                } catch (e) {}
-                return originalLocationSet.call(this, url);
-            },
-            configurable: true,
-            enumerable: true
-        });
-
-        const _assign = Location.prototype.assign;
-        Location.prototype.assign = function(url) {
-            try {
-                if (url && typeof url === "string" && isBlockList(processUrl(url))) {
-                    console_log("[Blocked Page Redirect via assign()]", url);
-                    return;
-                }
-            } catch (e) {}
-            return _assign.apply(this, arguments);
-        };
-        mark(Location.prototype.assign, "function assign() { [native code] }");
-
-        const _replace = Location.prototype.replace;
-        Location.prototype.replace = function(url) {
-            try {
-                if (url && typeof url === "string" && isBlockList(processUrl(url))) {
-                    console_log("[Blocked Page Redirect via replace()]", url);
-                    return;
-                }
-            } catch (e) {}
-            return _replace.apply(this, arguments);
-        };
-        mark(Location.prototype.replace, "function replace() { [native code] }");
-
-    } catch (err) {
-        console_error("[AdBlock Hook] Failed to lock Location Prototype:", err);
-    }
-
     // =====================================================
     // CLOAKING ENGINE V3 - ANTI-DETECTION & ANONYMITY ENHANCEMENTS
     // =====================================================

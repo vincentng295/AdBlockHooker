@@ -5,7 +5,8 @@
   "description": "Adblock based on Hooking technique, helps block ads more effectively and is hard to be detected by other ad blockers.",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "webNavigation"
   ],
   "background": {
     "service_worker": "background.js"
